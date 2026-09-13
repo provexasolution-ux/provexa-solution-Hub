@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 200" width="100%" height="100%">
+  <!-- Left Brand Icon Tile -->
+  <g id="provexa-icon-badge">
+    <rect x="10" y="10" width="180" height="180" rx="44" fill="#071739" />
+    <rect x="13" y="13" width="174" height="174" rx="41" stroke="#00A8FF" stroke-opacity="0.35" stroke-width="6" fill="none" />
+    <!-- P glyph -->
+    <path d="M 52 56 L 85 56 C 103 56 114 67 114 83 C 114 100 103 110 85 110 L 69 110 L 69 144 L 52 144 Z M 69 71 L 69 96 L 83 96 C 91 96 97 91 97 83 C 97 76 91 71 83 71 Z" fill="#FFFFFF" />
+    <!-- X Right Leg -->
+    <path d="M 134 56 L 152 56 L 105 144 L 87 144 Z" fill="#FFFFFF" opacity="0.85" />
+    <!-- Cyan Dynamic Chevron -->
+    <path d="M 90 56 L 108 56 L 156 144 L 138 144 Z" fill="#00A8FF" />
+  </g>
+
+  <!-- Right Wordmark: PROVEXA -->
+  <g id="provexa-main-text" transform="translate(200, 0)">
+    <!-- P -->
+    <path d="M 30 20 L 76 20 C 98 20 110 32 110 50 C 110 68 98 80 76 80 L 52 80 L 52 120 L 30 120 Z M 52 40 L 52 61 L 74 61 C 83 61 88 57 88 50 C 88 43 83 40 74 40 Z" fill="#071739" />
+
+    <!-- R -->
+    <path d="M 124 20 L 174 20 C 196 20 208 31 208 48 C 208 61 199 71 184 75 L 212 120 L 186 120 L 161 79 L 146 79 L 146 120 L 124 120 Z M 146 40 L 146 61 L 170 61 C 180 61 185 57 185 50 C 185 43 180 40 170 40 Z" fill="#071739" />
+
+    <!-- O -->
+    <path d="M 270 20 C 302 20 324 42 324 70 C 324 98 302 120 270 120 C 238 120 216 98 216 70 C 216 42 238 20 270 20 Z M 270 41 C 251 41 239 54 239 70 C 239 86 251 99 270 99 C 289 99 301 86 301 70 C 301 54 289 41 270 41 Z" fill="#071739" />
+
+    <!-- V (Electric Cyan) -->
+    <path d="M 326 20 L 350 20 L 377 96 L 404 20 L 428 20 L 390 120 L 364 120 Z" fill="#00A8FF" />
+
+    <!-- E -->
+    <path d="M 436 20 L 498 20 L 498 41 L 458 41 L 458 59 L 492 59 L 492 79 L 458 79 L 458 99 L 498 99 L 498 120 L 436 120 Z" fill="#071739" />
+
+    <!-- X (Two Crossing Bars: Cyan \ and Navy /) -->
+    <!-- Navy / Stroke -->
+    <path d="M 568 20 L 592 20 L 518 120 L 494 120 Z" fill="#071739" />
+    <!-- Cyan \ Stroke (In front) -->
+    <path d="M 504 20 L 528 20 L 602 120 L 578 120 Z" fill="#00A8FF" />
+
+    <!-- A -->
+    <path d="M 650 20 L 674 20 L 710 120 L 686 120 L 677 95 L 637 95 L 628 120 L 604 120 Z M 644 76 L 670 76 L 657 39 Z" fill="#071739" />
+
+    <!-- S O L U T I O N -->
+    <text x="370" y="182" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Plus Jakarta Sans', sans-serif" font-size="34" font-weight="900" letter-spacing="0.48em" fill="#071739">SOLUTION</text>
+  </g>
+</svg>
+

@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix CRM Project Provexa Solution",
+  "description": "Sistem CRM leads WhatsApp dengan integrasi automatik Google Sheets, borang jualan awam, templat follow-up, peringatan janji temu dan promosi, serta papan pemuka jualan real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
