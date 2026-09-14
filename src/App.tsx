@@ -168,6 +168,28 @@ export default function App() {
     }
   }, []);
 
+  // Load all data from cloud on first mount, merging over local defaults
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const cloud = await loadAllFromCloud();
+      if (cancelled) return;
+      if (cloud.projects) { setProjects(cloud.projects); saveStoredProjects(cloud.projects); }
+      if (cloud.leads) { setLeads(cloud.leads); saveStoredLeads(cloud.leads); }
+      if (cloud.financialDocs) { setFinancialDocs(cloud.financialDocs); saveStoredFinancialDocs(cloud.financialDocs); }
+      if (cloud.agreements) { setAgreements(cloud.agreements); saveStoredAgreements(cloud.agreements); }
+      if (cloud.reminders) { setReminders(cloud.reminders); saveStoredReminders(cloud.reminders); }
+      if (cloud.templates) { setTemplates(cloud.templates); saveStoredTemplates(cloud.templates); }
+      if (cloud.sheetConfig) { setSheetConfig(cloud.sheetConfig); saveStoredSheetConfig(cloud.sheetConfig); }
+      if (cloud.services) { setServices(cloud.services); saveStoredServices(cloud.services); }
+      if (cloud.digitalProducts) { setDigitalProducts(cloud.digitalProducts); saveStoredDigitalProducts(cloud.digitalProducts); }
+      if (cloud.digitalOrders) { setRetailOrders(cloud.digitalOrders); saveStoredDigitalOrders(cloud.digitalOrders); }
+      if (cloud.digitalSalesTarget) { setDigitalSalesTarget(cloud.digitalSalesTarget); saveStoredDigitalSalesTarget(cloud.digitalSalesTarget); }
+      if (cloud.digitalLeads) { setDigitalLeads(cloud.digitalLeads); saveStoredDigitalLeads(cloud.digitalLeads); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Initialize Firebase Auth Listener
   useEffect(() => {
     const unsubscribe = initAuth(
