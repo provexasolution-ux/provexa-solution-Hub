@@ -15,6 +15,7 @@ import {
   DigitalRetailLead,
 } from '../types';
 import { DEFAULT_TEMPLATES, stripEmojis } from '../utils/whatsapp';
+import { cloudSave, cloudLoad } from './supabaseClient';
 
 const STORAGE_KEYS = {
   PROJECTS: 'provexa_projects_v1',
@@ -1799,6 +1800,7 @@ export const getStoredProjects = (): Project[] => {
 export const saveStoredProjects = (projects: Project[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    cloudSave(STORAGE_KEYS.PROJECTS, projects);
   } catch (err) {
     console.error('Error saving projects to localStorage:', err);
   }
@@ -1832,6 +1834,7 @@ export const getStoredLeads = (): Lead[] => {
 export const saveStoredLeads = (leads: Lead[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+    cloudSave(STORAGE_KEYS.LEADS, leads);
   } catch (err) {
     console.error('Error saving leads to localStorage:', err);
   }
@@ -1865,6 +1868,7 @@ export const getStoredFinancialDocs = (): FinancialDoc[] => {
 export const saveStoredFinancialDocs = (docs: FinancialDoc[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.FINANCIAL_DOCS, JSON.stringify(docs));
+    cloudSave(STORAGE_KEYS.FINANCIAL_DOCS, docs);
   } catch (err) {
     console.error('Error saving financial docs to localStorage:', err);
   }
@@ -1882,6 +1886,7 @@ export const getStoredAgreements = (): AgreementDoc[] => {
 export const saveStoredAgreements = (agreements: AgreementDoc[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.AGREEMENTS, JSON.stringify(agreements));
+    cloudSave(STORAGE_KEYS.AGREEMENTS, agreements);
   } catch (err) {
     console.error('Error saving agreements to localStorage:', err);
   }
@@ -1899,6 +1904,7 @@ export const getStoredReminders = (): Reminder[] => {
 export const saveStoredReminders = (reminders: Reminder[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
+    cloudSave(STORAGE_KEYS.REMINDERS, reminders);
   } catch (err) {
     console.error('Error saving reminders to localStorage:', err);
   }
@@ -1921,6 +1927,7 @@ export const getStoredTemplates = (): MessageTemplate[] => {
 export const saveStoredTemplates = (templates: MessageTemplate[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates));
+    cloudSave(STORAGE_KEYS.TEMPLATES, templates);
   } catch (err) {
     console.error('Error saving templates to localStorage:', err);
   }
@@ -1938,6 +1945,7 @@ export const getStoredSheetConfig = (): GoogleSheetsConfig => {
 export const saveStoredSheetConfig = (config: GoogleSheetsConfig): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.SHEET_CONFIG, JSON.stringify(config));
+    cloudSave(STORAGE_KEYS.SHEET_CONFIG, config);
   } catch (err) {
     console.error('Error saving sheet config to localStorage:', err);
   }
@@ -1994,6 +2002,7 @@ export const getStoredServices = (): Record<string, ServiceMeta> => {
 export const saveStoredServices = (services: Record<string, ServiceMeta>): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(services));
+    cloudSave(STORAGE_KEYS.SERVICES, services);
     // Keep PROVEXA_SERVICES synced
     Object.keys(PROVEXA_SERVICES).forEach((k) => {
       if (!services[k]) delete PROVEXA_SERVICES[k];
@@ -2408,6 +2417,7 @@ export const getStoredDigitalProducts = (): DigitalProduct[] => {
 export const saveStoredDigitalProducts = (products: DigitalProduct[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.DIGITAL_PRODUCTS, JSON.stringify(products));
+    cloudSave(STORAGE_KEYS.DIGITAL_PRODUCTS, products);
   } catch (err) {
     console.error('Error saving digital products to localStorage:', err);
   }
@@ -2441,6 +2451,7 @@ export const getStoredDigitalOrders = (): DigitalRetailOrder[] => {
 export const saveStoredDigitalOrders = (orders: DigitalRetailOrder[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.DIGITAL_ORDERS, JSON.stringify(orders));
+    cloudSave(STORAGE_KEYS.DIGITAL_ORDERS, orders);
   } catch (err) {
     console.error('Error saving digital retail orders to localStorage:', err);
   }
@@ -2473,6 +2484,7 @@ export const getStoredDigitalSalesTarget = (): DigitalSalesTarget => {
 export const saveStoredDigitalSalesTarget = (target: DigitalSalesTarget): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.DIGITAL_TARGET, JSON.stringify(target));
+    cloudSave(STORAGE_KEYS.DIGITAL_TARGET, target);
   } catch (err) {
     console.error('Error saving digital sales target to localStorage:', err);
   }
@@ -2585,9 +2597,51 @@ export const getStoredDigitalLeads = (): DigitalRetailLead[] => {
 export const saveStoredDigitalLeads = (leads: DigitalRetailLead[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.DIGITAL_LEADS, JSON.stringify(leads));
+    cloudSave(STORAGE_KEYS.DIGITAL_LEADS, leads);
   } catch (err) {
     console.error('Error saving digital retail leads to localStorage:', err);
   }
 };
+
+export interface CloudDataSet {
+  projects: Project[] | null;
+  leads: Lead[] | null;
+  financialDocs: FinancialDoc[] | null;
+  agreements: AgreementDoc[] | null;
+  reminders: Reminder[] | null;
+  templates: MessageTemplate[] | null;
+  sheetConfig: GoogleSheetsConfig | null;
+  services: Record<string, ServiceMeta> | null;
+  digitalProducts: DigitalProduct[] | null;
+  digitalOrders: DigitalRetailOrder[] | null;
+  digitalSalesTarget: DigitalSalesTarget | null;
+  digitalLeads: DigitalRetailLead[] | null;
+}
+
+export async function loadAllFromCloud(): Promise<CloudDataSet> {
+  const [
+    projects, leads, financialDocs, agreements, reminders,
+    templates, sheetConfig, services, digitalProducts,
+    digitalOrders, digitalSalesTarget, digitalLeads,
+  ] = await Promise.all([
+    cloudLoad<Project[]>(STORAGE_KEYS.PROJECTS),
+    cloudLoad<Lead[]>(STORAGE_KEYS.LEADS),
+    cloudLoad<FinancialDoc[]>(STORAGE_KEYS.FINANCIAL_DOCS),
+    cloudLoad<AgreementDoc[]>(STORAGE_KEYS.AGREEMENTS),
+    cloudLoad<Reminder[]>(STORAGE_KEYS.REMINDERS),
+    cloudLoad<MessageTemplate[]>(STORAGE_KEYS.TEMPLATES),
+    cloudLoad<GoogleSheetsConfig>(STORAGE_KEYS.SHEET_CONFIG),
+    cloudLoad<Record<string, ServiceMeta>>(STORAGE_KEYS.SERVICES),
+    cloudLoad<DigitalProduct[]>(STORAGE_KEYS.DIGITAL_PRODUCTS),
+    cloudLoad<DigitalRetailOrder[]>(STORAGE_KEYS.DIGITAL_ORDERS),
+    cloudLoad<DigitalSalesTarget>(STORAGE_KEYS.DIGITAL_TARGET),
+    cloudLoad<DigitalRetailLead[]>(STORAGE_KEYS.DIGITAL_LEADS),
+  ]);
+  return {
+    projects, leads, financialDocs, agreements, reminders,
+    templates, sheetConfig, services, digitalProducts,
+    digitalOrders, digitalSalesTarget, digitalLeads,
+  };
+}
 
 

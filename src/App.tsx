@@ -69,6 +69,7 @@ import {
   saveStoredDigitalSalesTarget,
   getStoredDigitalLeads,
   saveStoredDigitalLeads,
+  loadAllFromCloud,
 } from './services/storage';
 
 import {
