@@ -21,6 +21,9 @@ import {
   User,
   ExternalLink,
   X,
+  Upload,
+  Download,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Lead,
@@ -36,6 +39,7 @@ interface LeadsManagerProps {
   onAddLead: (lead: Omit<Lead, 'id' | 'tarikhDicipta' | 'tarikhDikemaskini'>) => void;
   onUpdateLead: (lead: Lead) => void;
   onDeleteLead: (id: string) => void;
+  onBulkAddLeads: (leads: Omit<Lead, 'id' | 'tarikhDicipta' | 'tarikhDikemaskini'>[]) => void;
   onOpenFollowupModal: (lead: Lead) => void;
   onGenerateQuotationForLead: (lead: Lead) => void;
   onGenerateAgreementForLead: (lead: Lead) => void;
@@ -79,6 +83,7 @@ export const LeadsManager: React.FC<LeadsManagerProps> = ({
   onAddLead,
   onUpdateLead,
   onDeleteLead,
+  onBulkAddLeads,
   onOpenFollowupModal,
   onGenerateQuotationForLead,
   onGenerateAgreementForLead,
@@ -109,6 +114,148 @@ export const LeadsManager: React.FC<LeadsManagerProps> = ({
   const [jangkaanGarisMasa, setJangkaanGarisMasa] = useState('1 Bulan');
   const [keperluanProjek, setKeperluanProjek] = useState('');
   const [nota, setNota] = useState('');
+
+  // CSV Upload State
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [csvText, setCsvText] = useState('');
+  const [csvError, setCsvError] = useState('');
+  const [csvPreview, setCsvPreview] = useState<Omit<Lead, 'id' | 'tarikhDicipta' | 'tarikhDikemaskini'>[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const validSources: string[] = ['whatsapp', 'borang_web', 'rujukan', 'facebook', 'instagram', 'tiktok', 'google', 'iklan', 'networking', 'lain_lain'];
+  const validServices: string[] = Object.keys(PROVEXA_SERVICES);
+  const validStatuses: string[] = PROVEXA_STATUS_COLUMNS.map((c) => c.key);
+
+  const parseCsv = (text: string): Omit<Lead, 'id' | 'tarikhDicipta' | 'tarikhDikemaskini'>[] => {
+    const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) throw new Error('CSV mesti ada baris header dan sekurang-kurangnya 1 baris data.');
+    const header = parseCsvLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, '_'));
+    const namaIdx = header.indexOf('nama');
+    const telefonIdx = header.indexOf('telefon');
+    const emelIdx = header.indexOf('emel');
+    const syarikatIdx = header.indexOf('syarikat');
+    const servisIdx = header.indexOf('servisminat');
+    const sumberIdx = header.indexOf('sumber');
+    const statusIdx = header.indexOf('status');
+    const bajetIdx = header.indexOf('anggaranbajet');
+    const garisMasaIdx = header.indexOf('jangkaangarismasa');
+    const keperluanIdx = header.indexOf('keperluanprojek');
+    const notaIdx = header.indexOf('nota');
+
+    if (namaIdx === -1 || telefonIdx === -1) {
+      throw new Error('CSV mesti mempunyai lajur "nama" dan "telefon".');
+    }
+
+    const parsed: Omit<Lead, 'id' | 'tarikhDicipta' | 'tarikhDikemaskini'>[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLine(lines[i]);
+      const namaVal = cols[namaIdx]?.trim();
+      const telefonVal = cols[telefonIdx]?.trim();
+      if (!namaVal || !telefonVal) continue;
+
+      let servisVal = cols[servisIdx]?.trim().toLowerCase() || 'website';
+      if (!validServices.includes(servisVal)) servisVal = 'website';
+
+      let sumberVal = cols[sumberIdx]?.trim().toLowerCase() || 'whatsapp';
+      if (!validSources.includes(sumberVal)) sumberVal = 'lain_lain';
+
+      let statusVal = cols[statusIdx]?.trim().toLowerCase() || 'baru';
+      if (!validStatuses.includes(statusVal)) statusVal = 'baru';
+
+      const bajetVal = parseFloat(cols[bajetIdx]?.replace(/[^0-9.]/g, '') || '0') || 0;
+
+      parsed.push({
+        nama: namaVal,
+        telefon: telefonVal,
+        emel: emelIdx >= 0 ? cols[emelIdx]?.trim() || undefined : undefined,
+        syarikat: syarikatIdx >= 0 ? cols[syarikatIdx]?.trim() || undefined : undefined,
+        servisMinat: servisVal as ProvexaService,
+        sumber: sumberVal as LeadSource,
+        status: statusVal as LeadStatus,
+        anggaranBajet: bajetVal,
+        jangkaanGarisMasa: garisMasaIdx >= 0 ? cols[garisMasaIdx]?.trim() || '' : '',
+        keperluanProjek: keperluanIdx >= 0 ? cols[keperluanIdx]?.trim() || '' : '',
+        nota: notaIdx >= 0 ? cols[notaIdx]?.trim() || '' : '',
+      });
+    }
+    if (parsed.length === 0) throw new Error('Tiada baris data yang sah ditemui dalam CSV.');
+    return parsed;
+  };
+
+  const handleCsvTextChange = (text: string) => {
+    setCsvText(text);
+    setCsvError('');
+    if (text.trim()) {
+      try {
+        const parsed = parseCsv(text);
+        setCsvPreview(parsed);
+      } catch (err: any) {
+        setCsvError(err.message);
+        setCsvPreview([]);
+      }
+    } else {
+      setCsvPreview([]);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      handleCsvTextChange(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadTemplate = () => {
+    const header = 'nama,telefon,emel,syarikat,servisMinat,sumber,status,anggaranBajet,jangkaanGarisMasa,keperluanProjek,nota';
+    const sample = 'Dato Azhar,0123456789,azhar@email.com,Mega Niaga Sdn Bhd,website,whatsapp,baru,5000,1 Bulan,Website e-commerce,Pelanggan VIP';
+    const blob = new Blob([`${header}\n${sample}\n`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template_leads_provexa.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCsvImport = () => {
+    if (csvPreview.length === 0) {
+      setCsvError('Tiada data untuk diimport. Sila muat naik atau tampal CSV dahulu.');
+      return;
+    }
+    onBulkAddLeads(csvPreview);
+    setIsCsvModalOpen(false);
+    setCsvText('');
+    setCsvPreview([]);
+    setCsvError('');
+  };
 
   const openAddModal = () => {
     setEditingLead(null);
@@ -225,6 +372,16 @@ export const LeadsManager: React.FC<LeadsManagerProps> = ({
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             <span>{isSyncing ? 'Segerak...' : 'Google Sheets'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCsvModalOpen(true)}
+            className="px-3.5 py-2.5 bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 rounded-2xl text-xs font-bold shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center space-x-2"
+            title="Muat Naik CSV"
+          >
+            <Upload className="w-4 h-4 text-blue-600" />
+            <span>Import CSV</span>
           </button>
 
           <button
@@ -798,6 +955,148 @@ export const LeadsManager: React.FC<LeadsManagerProps> = ({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Padam</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Import Modal */}
+      {isCsvModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6">
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">Import Leads dari CSV</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setIsCsvModalOpen(false); setCsvText(''); setCsvPreview([]); setCsvError(''); }}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto text-xs">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1.5">
+                <p className="font-bold text-blue-900 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4" />
+                  Format CSV
+                </p>
+                <p className="text-blue-700 leading-relaxed">
+                  Lajur yang diperlukan: <span className="font-mono font-bold">nama, telefon</span>.
+                  Lajur pilihan: <span className="font-mono">emel, syarikat, servisMinat, sumber, status, anggaranBajet, jangkaanGarisMasa, keperluanProjek, nota</span>.
+                </p>
+                <p className="text-blue-600 text-[11px]">
+                  servisMinat: {validServices.join(', ')}<br/>
+                  sumber: {validSources.join(', ')}<br/>
+                  status: {validStatuses.join(', ')}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="mt-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center gap-1.5 text-[11px] transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Muat Turun Template CSV
+                </button>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">Muat Naik Fail CSV</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full px-4 py-6 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-400 hover:bg-blue-50/50 transition-all text-center"
+                >
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="font-bold text-slate-700">Klik untuk pilih fail CSV</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">atau tampal data CSV di ruangan di bawah</p>
+                </button>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">Atau Tampal Data CSV</label>
+                <textarea
+                  rows={5}
+                  value={csvText}
+                  onChange={(e) => handleCsvTextChange(e.target.value)}
+                  placeholder="nama,telefon,emel,syarikat,servisMinat,sumber,status,anggaranBajet&#10;Dato Azhar,0123456789,azhar@email.com,Mega Niaga,website,whatsapp,baru,5000"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono text-[11px]"
+                />
+              </div>
+
+              {csvError && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-rose-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="font-medium">{csvError}</span>
+                </div>
+              )}
+
+              {csvPreview.length > 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                  <p className="font-bold text-emerald-800 mb-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {csvPreview.length} leads sedia untuk diimport
+                  </p>
+                  <div className="max-h-40 overflow-y-auto bg-white rounded-lg border border-emerald-100">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-emerald-50/50 text-slate-600 font-bold sticky top-0">
+                        <tr>
+                          <th className="py-1.5 px-2">Nama</th>
+                          <th className="py-1.5 px-2">Telefon</th>
+                          <th className="py-1.5 px-2">Servis</th>
+                          <th className="py-1.5 px-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {csvPreview.slice(0, 10).map((l, i) => (
+                          <tr key={i}>
+                            <td className="py-1.5 px-2 font-semibold text-slate-800">{l.nama}</td>
+                            <td className="py-1.5 px-2 font-mono text-slate-600">{l.telefon}</td>
+                            <td className="py-1.5 px-2 text-slate-600">{l.servisMinat}</td>
+                            <td className="py-1.5 px-2 text-slate-600">{l.status}</td>
+                          </tr>
+                        ))}
+                        {csvPreview.length > 10 && (
+                          <tr>
+                            <td colSpan={4} className="py-1.5 px-2 text-center text-slate-400 font-medium">
+                              ...dan {csvPreview.length - 10} lagi
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-200 flex justify-end space-x-2 bg-slate-50 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => { setIsCsvModalOpen(false); setCsvText(''); setCsvPreview([]); setCsvError(''); }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleCsvImport}
+                disabled={csvPreview.length === 0}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Import {csvPreview.length > 0 ? `(${csvPreview.length})` : ''}
               </button>
             </div>
           </div>

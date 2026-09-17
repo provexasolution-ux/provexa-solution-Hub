@@ -763,6 +763,31 @@ export default function App() {
     showToast('Lead berjaya dipadam.', 'info');
   };
 
+  const handleBulkAddLeads = (
+    newLeads: Omit<Lead, 'id' | 'tarikhDicipta' | 'tarikhDikemaskini'>[]
+  ) => {
+    const now = new Date().toISOString();
+    const toAdd: Lead[] = newLeads.map((data, i) => ({
+      ...data,
+      id: `LEAD-${Date.now().toString().slice(-4)}-${i}`,
+      tarikhDicipta: now,
+      tarikhDikemaskini: now,
+    }));
+    const updatedLeads = [...toAdd, ...leads];
+    setLeads(updatedLeads);
+    saveStoredLeads(updatedLeads);
+    showToast(`${toAdd.length} leads berjaya diimport dari CSV!`);
+
+    if (sheetConfig.spreadsheetId && accessToken && sheetConfig.autoSync) {
+      syncAllDataToSheet(accessToken, sheetConfig.spreadsheetId, {
+        leads: updatedLeads,
+        projects,
+        financialDocs,
+        agreements,
+      }).catch((err) => console.warn('Auto-sync error:', err));
+    }
+  };
+
   const handleRecordFollowUp = (leadId: string, customNote?: string) => {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead) return;
@@ -1331,6 +1356,7 @@ export default function App() {
               onAddLead={handleAddLead}
               onUpdateLead={handleUpdateLead}
               onDeleteLead={handleDeleteLead}
+              onBulkAddLeads={handleBulkAddLeads}
               onOpenFollowupModal={(lead) => {
                 setSelectedFollowupLead(lead);
                 setIsFollowupModalOpen(true);
