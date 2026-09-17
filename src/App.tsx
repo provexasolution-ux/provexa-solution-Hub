@@ -1066,6 +1066,22 @@ export default function App() {
     showToast(`Prospek "${lead?.nama || id}" telah dipadam.`, 'info');
   };
 
+  const handleBulkSaveDigitalLeads = (
+    leadsData: Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'>[]
+  ) => {
+    const now = new Date().toISOString();
+    const startIndex = digitalLeads.length + 1;
+    const newLeads: DigitalRetailLead[] = leadsData.map((data, i) => ({
+      ...data,
+      id: `DLD-${new Date().getFullYear()}-${String(startIndex + i).padStart(3, '0')}`,
+      tarikhDicipta: now,
+      kiraanFollowup: data.kiraanFollowup || 0,
+    }));
+    const updatedLeads = [...newLeads, ...digitalLeads];
+    setDigitalLeads(updatedLeads);
+    saveStoredDigitalLeads(updatedLeads);
+  };
+
   const handleConvertDigitalLeadToAgencyLead = (digitalLead: DigitalRetailLead) => {
     const newLeadData: Omit<Lead, 'id' | 'tarikhDicipta' | 'tarikhDikemaskini'> = {
       nama: digitalLead.nama,
@@ -1442,6 +1458,7 @@ export default function App() {
               onDeleteOrder={handleDeleteDigitalOrder}
               onConvertToLead={handleConvertRetailOrderToLead}
               onSaveDigitalLead={handleSaveDigitalLead}
+              onBulkSaveDigitalLeads={handleBulkSaveDigitalLeads}
               onDeleteDigitalLead={handleDeleteDigitalLead}
               onConvertDigitalLeadToAgencyLead={handleConvertDigitalLeadToAgencyLead}
               onGenerateDocForProduct={(prod, type) => handleOpenDocForDigitalProduct(prod, type || 'invois')}

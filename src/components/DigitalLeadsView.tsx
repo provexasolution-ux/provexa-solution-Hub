@@ -30,6 +30,8 @@ import {
   CreditCard,
   AlertCircle,
   BookOpen,
+  Upload,
+  Download,
 } from 'lucide-react';
 import {
   DigitalRetailLead,
@@ -42,6 +44,7 @@ interface DigitalLeadsViewProps {
   leads: DigitalRetailLead[];
   products: DigitalProduct[];
   onSaveLead: (lead: Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'> & { id?: string }) => void;
+  onBulkSaveLeads: (leads: Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'>[]) => void;
   onDeleteLead: (id: string) => void;
   onConvertLeadToOrder: (lead: DigitalRetailLead) => void;
   onConvertLeadToAgencyLead?: (lead: DigitalRetailLead) => void;
@@ -105,6 +108,7 @@ export const DigitalLeadsView: React.FC<DigitalLeadsViewProps> = ({
   leads,
   products,
   onSaveLead,
+  onBulkSaveLeads,
   onDeleteLead,
   onConvertLeadToOrder,
   onConvertLeadToAgencyLead,
@@ -138,6 +142,124 @@ export const DigitalLeadsView: React.FC<DigitalLeadsViewProps> = ({
   const [formSumber, setFormSumber] = useState<DigitalLeadSource>('whatsapp');
   const [formKeutamaan, setFormKeutamaan] = useState<'rendah' | 'sederhana' | 'tinggi'>('tinggi');
   const [formNota, setFormNota] = useState('');
+
+  // CSV Import State
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [csvText, setCsvText] = useState('');
+  const [csvError, setCsvError] = useState('');
+  const [csvPreview, setCsvPreview] = useState<Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'>[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const parseUserCsv = (text: string): Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'>[] => {
+    const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) throw new Error('CSV mesti ada baris header dan sekurang-kurangnya 1 baris data.');
+    const header = parseCsvLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, '_'));
+    const fullNameIdx = header.indexOf('full_name');
+    const emailIdx = header.indexOf('email');
+    const phoneIdx = header.indexOf('phone');
+    const usernameIdx = header.indexOf('username');
+    const statusIdx = header.indexOf('status');
+    const loginCountIdx = header.indexOf('login_count');
+
+    if (fullNameIdx === -1 || phoneIdx === -1) {
+      throw new Error('CSV mesti mempunyai lajur "Full Name" dan "Phone".');
+    }
+
+    const defaultProduct = products[0];
+    const parsed: Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'>[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLine(lines[i]);
+      const namaVal = cols[fullNameIdx]?.trim();
+      const phoneVal = cols[phoneIdx]?.trim();
+      if (!namaVal || !phoneVal || phoneVal.toLowerCase() === 'test') continue;
+
+      const loginCount = loginCountIdx >= 0 ? parseInt(cols[loginCountIdx] || '0', 10) : 0;
+      const statusVal = statusIdx >= 0 ? cols[statusIdx]?.trim().toLowerCase() : '';
+
+      parsed.push({
+        nama: namaVal,
+        telefon: phoneVal,
+        emel: emailIdx >= 0 ? cols[emailIdx]?.trim() || undefined : undefined,
+        produkDiminatiId: defaultProduct?.id,
+        namaProdukDiminati: defaultProduct?.nama || 'E-Book Provexa',
+        anggaranNilai: defaultProduct?.hargaRuncit || 69,
+        status: 'baru',
+        sumber: 'lead_magnet',
+        keutamaan: loginCount > 5 ? 'tinggi' : loginCount > 1 ? 'sederhana' : 'rendah',
+        nota: usernameIdx >= 0 && cols[usernameIdx]?.trim()
+          ? `Diimport dari senarai pengguna. Username: ${cols[usernameIdx].trim()}. Login: ${loginCount}x. Status asal: ${statusVal || 'approved'}.`
+          : `Diimport dari senarai pengguna. Login: ${loginCount}x.`,
+        kiraanFollowup: 0,
+      });
+    }
+    if (parsed.length === 0) throw new Error('Tiada baris data yang sah ditemui dalam CSV.');
+    return parsed;
+  };
+
+  const handleCsvTextChange = (text: string) => {
+    setCsvText(text);
+    setCsvError('');
+    if (text.trim()) {
+      try {
+        const parsed = parseUserCsv(text);
+        setCsvPreview(parsed);
+      } catch (err: any) {
+        setCsvError(err.message);
+        setCsvPreview([]);
+      }
+    } else {
+      setCsvPreview([]);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      handleCsvTextChange(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvImport = () => {
+    if (csvPreview.length === 0) {
+      setCsvError('Tiada data untuk diimport. Sila muat naik atau tampal CSV dahulu.');
+      return;
+    }
+    onBulkSaveLeads(csvPreview);
+    showToast(`${csvPreview.length} prospek berjaya diimport dari CSV!`);
+    setIsCsvModalOpen(false);
+    setCsvText('');
+    setCsvPreview([]);
+    setCsvError('');
+  };
 
   // Calculations
   const metrics = useMemo(() => {
@@ -319,13 +441,22 @@ export const DigitalLeadsView: React.FC<DigitalLeadsViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleOpenNewModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold shadow-md hover:shadow-blue-500/30 transition-all shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Prospek Digital</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setIsCsvModalOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Import CSV</span>
+          </button>
+          <button
+            onClick={handleOpenNewModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold shadow-md hover:shadow-blue-500/30 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Prospek</span>
+          </button>
+        </div>
       </div>
 
       {/* Metrics Summary Strip */}
@@ -981,6 +1112,138 @@ export const DigitalLeadsView: React.FC<DigitalLeadsViewProps> = ({
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs"
               >
                 Ya, Padam
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Import Modal */}
+      {isCsvModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6">
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">Import Prospek dari CSV Pengguna</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setIsCsvModalOpen(false); setCsvText(''); setCsvPreview([]); setCsvError(''); }}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto text-xs">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1.5">
+                <p className="font-bold text-blue-900 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4" />
+                  Format CSV Disokong
+                </p>
+                <p className="text-blue-700 leading-relaxed">
+                  Format dari export pengguna: <span className="font-mono font-bold">Full Name, Email, Username, Phone, Status, Created At, Last Login, Login Count</span>.
+                  Hanya lajur <span className="font-bold">Full Name</span> dan <span className="font-bold">Phone</span> yang diperlukan.
+                </p>
+                <p className="text-blue-600 text-[11px]">
+                  Setiap pengguna akan diimport sebagai prospek digital baharu dengan sumber "Lead Magnet" dan status "Inkuiri Baharu".
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">Muat Naik Fail CSV</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full px-4 py-6 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-400 hover:bg-blue-50/50 transition-all text-center"
+                >
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="font-bold text-slate-700">Klik untuk pilih fail CSV</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">atau tampal data CSV di ruangan di bawah</p>
+                </button>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">Atau Tampal Data CSV</label>
+                <textarea
+                  rows={5}
+                  value={csvText}
+                  onChange={(e) => handleCsvTextChange(e.target.value)}
+                  placeholder="Full Name,Email,Username,Phone,Status,Created At,Last Login,Login Count&#10;Ahmad Zaki,zaki@email.com,zaki88,0123456789,approved,9/15/2026,9/15/2026,1"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono text-[11px]"
+                />
+              </div>
+
+              {csvError && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-rose-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="font-medium">{csvError}</span>
+                </div>
+              )}
+
+              {csvPreview.length > 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                  <p className="font-bold text-emerald-800 mb-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {csvPreview.length} prospek sedia untuk diimport
+                  </p>
+                  <div className="max-h-40 overflow-y-auto bg-white rounded-lg border border-emerald-100">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-emerald-50/50 text-slate-600 font-bold sticky top-0">
+                        <tr>
+                          <th className="py-1.5 px-2">Nama</th>
+                          <th className="py-1.5 px-2">Telefon</th>
+                          <th className="py-1.5 px-2">Emel</th>
+                          <th className="py-1.5 px-2">Keutamaan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {csvPreview.slice(0, 10).map((l, i) => (
+                          <tr key={i}>
+                            <td className="py-1.5 px-2 font-semibold text-slate-800">{l.nama}</td>
+                            <td className="py-1.5 px-2 font-mono text-slate-600">{l.telefon}</td>
+                            <td className="py-1.5 px-2 text-slate-600 truncate max-w-[120px]">{l.emel || '-'}</td>
+                            <td className="py-1.5 px-2 text-slate-600">{l.keutamaan}</td>
+                          </tr>
+                        ))}
+                        {csvPreview.length > 10 && (
+                          <tr>
+                            <td colSpan={4} className="py-1.5 px-2 text-center text-slate-400 font-medium">
+                              ...dan {csvPreview.length - 10} lagi
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-200 flex justify-end space-x-2 bg-slate-50 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => { setIsCsvModalOpen(false); setCsvText(''); setCsvPreview([]); setCsvError(''); }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleCsvImport}
+                disabled={csvPreview.length === 0}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Import {csvPreview.length > 0 ? `(${csvPreview.length})` : ''}
               </button>
             </div>
           </div>

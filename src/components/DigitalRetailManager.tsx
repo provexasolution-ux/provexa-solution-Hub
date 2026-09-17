@@ -60,6 +60,7 @@ interface DigitalRetailManagerProps {
   onDeleteOrder: (id: string) => void;
   onConvertToLead?: (order: DigitalRetailOrder) => void;
   onSaveDigitalLead?: (lead: Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'> & { id?: string }) => void;
+  onBulkSaveDigitalLeads?: (leads: Omit<DigitalRetailLead, 'id' | 'tarikhDicipta'>[]) => void;
   onDeleteDigitalLead?: (id: string) => void;
   onConvertDigitalLeadToAgencyLead?: (lead: DigitalRetailLead) => void;
   onGenerateDocForProduct?: (product: DigitalProduct, type?: DocType) => void;
@@ -83,6 +84,7 @@ export const DigitalRetailManager: React.FC<DigitalRetailManagerProps> = ({
   onDeleteOrder,
   onConvertToLead,
   onSaveDigitalLead,
+  onBulkSaveDigitalLeads,
   onDeleteDigitalLead,
   onConvertDigitalLeadToAgencyLead,
   onGenerateDocForProduct,
@@ -1056,6 +1058,7 @@ export const DigitalRetailManager: React.FC<DigitalRetailManagerProps> = ({
           leads={digitalLeads}
           products={products}
           onSaveLead={onSaveDigitalLead || (() => {})}
+          onBulkSaveLeads={onBulkSaveDigitalLeads || (() => {})}
           onDeleteLead={onDeleteDigitalLead || (() => {})}
           onConvertLeadToOrder={(lead) => {
             const matched = products.find((p) => p.id === lead.produkDiminatiId) || products[0];
