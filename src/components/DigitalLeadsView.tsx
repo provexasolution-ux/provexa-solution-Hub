@@ -224,15 +224,20 @@ export const DigitalLeadsView: React.FC<DigitalLeadsViewProps> = ({
   const handleCsvTextChange = (text: string) => {
     setCsvText(text);
     setCsvError('');
-    if (text.trim()) {
-      try {
-        const parsed = parseUserCsv(text);
-        setCsvPreview(parsed);
-      } catch (err: any) {
-        setCsvError(err.message);
-        setCsvPreview([]);
-      }
-    } else {
+    setCsvPreview([]);
+  };
+
+  const handleParseCsv = () => {
+    if (!csvText.trim()) {
+      setCsvError('Sila tampal atau muat naik data CSV dahulu.');
+      return;
+    }
+    try {
+      const parsed = parseUserCsv(csvText);
+      setCsvPreview(parsed);
+      setCsvError('');
+    } catch (err: any) {
+      setCsvError(err.message);
       setCsvPreview([]);
     }
   };
@@ -243,7 +248,15 @@ export const DigitalLeadsView: React.FC<DigitalLeadsViewProps> = ({
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      handleCsvTextChange(text);
+      setCsvText(text);
+      setCsvError('');
+      try {
+        const parsed = parseUserCsv(text);
+        setCsvPreview(parsed);
+      } catch (err: any) {
+        setCsvError(err.message);
+        setCsvPreview([]);
+      }
     };
     reader.readAsText(file);
   };
@@ -1180,6 +1193,15 @@ export const DigitalLeadsView: React.FC<DigitalLeadsViewProps> = ({
                   placeholder="Full Name,Email,Username,Phone,Status,Created At,Last Login,Login Count&#10;Ahmad Zaki,zaki@email.com,zaki88,0123456789,approved,9/15/2026,9/15/2026,1"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono text-[11px]"
                 />
+                {csvText.trim() && csvPreview.length === 0 && !csvError && (
+                  <button
+                    type="button"
+                    onClick={handleParseCsv}
+                    className="mt-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-[11px] font-bold rounded-lg"
+                  >
+                    Semak Data CSV
+                  </button>
+                )}
               </div>
 
               {csvError && (
