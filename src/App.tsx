@@ -1439,7 +1439,7 @@ export default function App() {
               onLeadSubmitted={(newLead) => {
                 handleAddLead(newLead);
               }}
-              sellerWhatsAppNumber="0129845521"
+              sellerWhatsAppNumber="0149175643"
               sellerName="Provexa Solution"
             />
           )}
