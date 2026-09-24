@@ -906,8 +906,9 @@ export const AgreementGeneratorModal: React.FC<AgreementGeneratorModalProps> = (
                 </p>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
                   <p>
-                    <strong>1. PROVEXA SOLUTION</strong> (No. SSM: 202403198822), beralamat di Suite
-                    8-02, Level 8, Vertical Corporate Tower B, Bangsar South, 59200 Kuala Lumpur
+                    <strong>1. PROVEXA SOLUTION</strong> (No. SSM: 202603062093 (CA0417861-M), beralamat di Suite
+                    39 TINGKAT 1, JALAN TASIK INDAH, 1/4
+TAMAN TASIK INDAH , 86000 KLUANG, JOHOR
                     (selepas ini dirujuk sebagai <em>"Penyedia Perkhidmatan"</em>).
                   </p>
                   <p>
