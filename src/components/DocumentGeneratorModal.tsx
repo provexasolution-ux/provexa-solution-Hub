@@ -163,7 +163,7 @@ export const DocumentGeneratorModal: React.FC<DocumentGeneratorModalProps> = ({
       '39 TINGKAT 1, JALAN TASIK INDAH, 1/4 TAMAN TASIK INDAH , 86000 KLUANG, JOHOR'
   );
   const [issuerTelefon, setIssuerTelefon] = useState<string>(
-    initialDoc?.syarikatPengeluar?.telefon || '+60 12-984 5521'
+    initialDoc?.syarikatPengeluar?.telefon || '+014 9175643'
   );
   const [issuerEmel, setIssuerEmel] = useState<string>(
     initialDoc?.syarikatPengeluar?.emel || 'hello@provexasolution.com'
