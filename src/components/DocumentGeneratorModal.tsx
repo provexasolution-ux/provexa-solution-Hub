@@ -318,7 +318,7 @@ export const DocumentGeneratorModal: React.FC<DocumentGeneratorModalProps> = ({
       setIssuerSSM(initialDoc.syarikatPengeluar?.ssm || '202403198822 (TR0289110-M)');
       setIssuerAlamat(
         initialDoc.syarikatPengeluar?.alamat ||
-          'Suite 8-02, Level 8, Vertical Corporate Tower B, Bangsar South, 59200 Kuala Lumpur'
+          '39 TINGKAT 1, JALAN TASIK INDAH, 1/4 TAMAN TASIK INDAH , 86000 KLUANG, JOHOR'
       );
       setIssuerTelefon(initialDoc.syarikatPengeluar?.telefon || '+60 12-984 5521');
       setIssuerEmel(initialDoc.syarikatPengeluar?.emel || 'hello@provexasolution.com');
