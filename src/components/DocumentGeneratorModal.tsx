@@ -156,11 +156,11 @@ export const DocumentGeneratorModal: React.FC<DocumentGeneratorModalProps> = ({
     initialDoc?.syarikatPengeluar?.nama || 'Provexa Solution'
   );
   const [issuerSSM, setIssuerSSM] = useState<string>(
-    initialDoc?.syarikatPengeluar?.ssm || '202403198822 (TR0289110-M)'
+    initialDoc?.syarikatPengeluar?.ssm || '202603062093 (CA0417861-M)'
   );
   const [issuerAlamat, setIssuerAlamat] = useState<string>(
     initialDoc?.syarikatPengeluar?.alamat ||
-      'Suite 8-02, Level 8, Vertical Corporate Tower B, Bangsar South, 59200 Kuala Lumpur'
+      '39 TINGKAT 1, JALAN TASIK INDAH, 1/4 TAMAN TASIK INDAH , 86000 KLUANG, JOHOR'
   );
   const [issuerTelefon, setIssuerTelefon] = useState<string>(
     initialDoc?.syarikatPengeluar?.telefon || '+60 12-984 5521'
